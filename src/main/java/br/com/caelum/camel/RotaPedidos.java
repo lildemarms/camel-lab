@@ -1,15 +1,18 @@
 package br.com.caelum.camel;
 
+import java.util.Arrays;
+
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.dataformat.xmljson.XmlJsonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
 
 public class RotaPedidos {
 
 	public static void main(String[] args) throws Exception {
 
-		//System.setProperty("org.apache.commons.logging.Log","org.apache.commons.logging.impl.NoOpLog");
+		System.setProperty("org.apache.commons.logging.Log","org.apache.commons.logging.impl.NoOpLog");
 
 		CamelContext context = new DefaultCamelContext();
 		context.addRoutes(new RouteBuilder() {
@@ -25,8 +28,7 @@ public class RotaPedidos {
 						xpath("/item/formato[text()='EBOOK']").
 					setProperty("ebookId", xpath("/item/livro/codigo/text()")).
 					log("${id} \n ${body}").
-					marshal().
-						xmljson().
+					marshal(getJsonFormater()).
 					log("${body}").
 					setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET)).
 					setHeader(Exchange.HTTP_QUERY, simple("clienteId=${property.clienteId}&pedidoId=${property.pedidoId}&ebookId=${property.ebookId}")).
@@ -38,4 +40,18 @@ public class RotaPedidos {
 		Thread.sleep(20000);
 		context.stop();
 	}	
+	
+	private static XmlJsonDataFormat getJsonFormater() {
+		XmlJsonDataFormat xmlJsonFormat = new XmlJsonDataFormat();
+
+		xmlJsonFormat.setEncoding("UTF-8");
+		xmlJsonFormat.setForceTopLevelObject(true);
+		xmlJsonFormat.setTrimSpaces(true);
+		xmlJsonFormat.setRootName("newRoot");
+		xmlJsonFormat.setSkipNamespaces(true);
+		xmlJsonFormat.setRemoveNamespacePrefixes(true);
+		xmlJsonFormat.setExpandableProperties(Arrays.asList("d", "e"));
+		
+		return xmlJsonFormat;
+	}
 }
