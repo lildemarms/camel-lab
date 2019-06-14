@@ -9,6 +9,8 @@ public class RotaPedidos {
 
 	public static void main(String[] args) throws Exception {
 
+		//System.setProperty("org.apache.commons.logging.Log","org.apache.commons.logging.impl.NoOpLog");
+
 		CamelContext context = new DefaultCamelContext();
 		context.addRoutes(new RouteBuilder() {
 			
