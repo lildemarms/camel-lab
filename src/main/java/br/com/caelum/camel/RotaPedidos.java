@@ -1,11 +1,11 @@
 package br.com.caelum.camel;
 
-import java.util.Arrays;
+import java.util.logging.Logger;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.dataformat.xmljson.XmlJsonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
 
 public class RotaPedidos {
@@ -19,12 +19,46 @@ public class RotaPedidos {
 			
 			@Override
 			public void configure() throws Exception {
+				
+				errorHandler(deadLetterChannel("file:erro").
+						logExhaustedMessageHistory(false).
+						maximumRedeliveries(3).
+							redeliveryDelay(5000).
+						onRedelivery(new Processor() {
+							
+							@Override
+							public void process(Exchange exchange) throws Exception {
+								int counter = (int) exchange.getIn().getHeader(Exchange.REDELIVERY_COUNTER);
+							    int max = (int) exchange.getIn().getHeader(Exchange.REDELIVERY_MAX_COUNTER);
+
+							    Logger.getLogger(RotaPedidos.class.getName()).info("Redelivery - " + counter + "/" + max );
+							}
+						}));
+				
+				/*onException(Exception.class).
+			    handled(true).
+			        maximumRedeliveries(3).
+			            redeliveryDelay(4000).
+			        onRedelivery(new Processor() {
+
+			            @Override
+			            public void process(Exchange exchange) throws Exception {
+			                    int counter = (int) exchange.getIn().getHeader(Exchange.REDELIVERY_COUNTER);
+			                    int max = (int) exchange.getIn().getHeader(Exchange.REDELIVERY_MAX_COUNTER);
+
+			                    Logger.getLogger(RotaPedidos.class.getName()).info("Redelivery - " + counter + "/" + max );
+			            }
+			    });*/
+				
 				from("file:pedidos?delay=5s&noop=true").
+					log("${file:name}").
 					routeId("rota-pedidos").
-				multicast().
-					to("direct:soap").
-						log("Chamando soap com ${body}").
-					to("direct:http");
+					delay(1000).
+				to("validator:pedido.xsd").
+					multicast().
+						to("direct:soap").
+							log("Chamando soap com ${body}").
+						to("direct:http");
 				
 				
 				from("direct:http").
