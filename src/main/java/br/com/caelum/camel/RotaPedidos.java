@@ -2,6 +2,7 @@ package br.com.caelum.camel;
 
 import java.util.logging.Logger;
 
+import org.apache.activemq.camel.component.ActiveMQComponent;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -15,13 +16,16 @@ public class RotaPedidos {
 		System.setProperty("org.apache.commons.logging.Log","org.apache.commons.logging.impl.NoOpLog");
 
 		CamelContext context = new DefaultCamelContext();
+		
+		context.addComponent("activemq", ActiveMQComponent.activeMQComponent("tcp://127.0.0.1:61616"));
+		
 		context.addRoutes(new RouteBuilder() {
 			
 			@Override
 			public void configure() throws Exception {
 				
-				errorHandler(deadLetterChannel("file:erro").
-						logExhaustedMessageHistory(false).
+				errorHandler(deadLetterChannel("activemq:queue:pedidos.DLQ").
+						logExhaustedMessageHistory(true).
 						maximumRedeliveries(3).
 							redeliveryDelay(5000).
 						onRedelivery(new Processor() {
@@ -50,8 +54,8 @@ public class RotaPedidos {
 			            }
 			    });*/
 				
-				from("file:pedidos?delay=5s&noop=true").
-					log("${file:name}").
+				from("activemq:queue:pedidos").
+					//log("${file:name}").
 					routeId("rota-pedidos").
 					delay(1000).
 				to("validator:pedido.xsd").
